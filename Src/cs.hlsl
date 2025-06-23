@@ -1,4 +1,4 @@
-#define ALL_BUFFERS_READWRITE
+// #define ALL_BUFFERS_READWRITE
 
 #if defined(ALL_BUFFERS_READWRITE)
     RWStructuredBuffer<float> inputA : register(u0, space1);
@@ -11,7 +11,7 @@
 #endif
 
 [numthreads(512, 1, 1)]
-void main(uint3 tid : SV_DispatchThreadId) {
+void CSMain(uint3 tid : SV_DispatchThreadId) {
     const float a = inputA[tid.x];
     const float b = inputB[tid.x];
 

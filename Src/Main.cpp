@@ -5,7 +5,7 @@
 #include <spdlog/spdlog.h>
 #include <vector>
 
-#define ALL_BUFFERS_READWRITE
+// #define ALL_BUFFERS_READWRITE
 
 static constexpr size_t k_BufferSize = 1024 * 1024;
 
@@ -17,7 +17,7 @@ int main(int argc, char** args) {
 
     SDL_GPUDevice* gpu = SDL_CreateGPUDevice(
 #if defined(__APPLE__)
-        SDL_GPU_SHADERFORMAT_METALLIB,
+        SDL_GPU_SHADERFORMAT_MSL,
 #elif defined(_WIN32)
         SDL_GPU_SHADERFORMAT_DXIL,
 #endif
@@ -32,7 +32,7 @@ int main(int argc, char** args) {
 
     const auto shaderFormats = SDL_GetGPUShaderFormats(gpu);
 #if defined(__APPLE__)
-    if (!(shaderFormats & SDL_GPU_SHADERFORMAT_METALLIB)) {
+    if (!(shaderFormats & SDL_GPU_SHADERFORMAT_MSL)) {
         spdlog::error("This GPU doesn't support Metal.");
     }
 #elif defined(_WIN32)
@@ -43,7 +43,7 @@ int main(int argc, char** args) {
 
     size_t shaderSize;
 #if defined(__APPLE__)
-    void* shaderCode = SDL_LoadFile("cs.mtlib", &shaderSize);
+    void* shaderCode = SDL_LoadFile("cs.metal", &shaderSize);
 #elif defined(_WIN32)
     void* shaderCode = SDL_LoadFile("cs.dxil", &shaderSize);
 #endif
@@ -51,10 +51,11 @@ int main(int argc, char** args) {
     SDL_GPUComputePipelineCreateInfo computePipelineInfo = {0};
     computePipelineInfo.code = reinterpret_cast<Uint8*>(shaderCode);
     computePipelineInfo.code_size = shaderSize;
-    computePipelineInfo.entrypoint = "main";
 #if defined(__APPLE__)
-    computePipelineInfo.format = SDL_GPU_SHADERFORMAT_METALLIB;
+    computePipelineInfo.entrypoint = "CSMain";
+    computePipelineInfo.format = SDL_GPU_SHADERFORMAT_MSL;
 #elif defined(_WIN32)
+    computePipelineInfo.entrypoint = "CSMain";
     computePipelineInfo.format = SDL_GPU_SHADERFORMAT_DXIL;
 #endif
     computePipelineInfo.num_readonly_storage_textures = 0;

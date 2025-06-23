@@ -5,63 +5,69 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 find_package(SDL3 REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
+option(SHADERCROSS_PATH "Path to SDL_shadercross executable")
+
 if (MSVC)
     add_compile_options(/W4)
 else()
     add_compile_options(-Wall -Werror)
 endif()
 
-if (MSVC)
+if (WIN32)
     set(DXC_PATH dxc)
 else ()
-    if (NOT DXC_PATH)
-        message(FATAL_ERROR "Please set 'DXC_PATH' when configuring.")
+    if (NOT SHADERCROSS_PATH)
+        message(FATAL_ERROR "Please set SHADERCROSS_PATH when invoking CMake.")
     endif()
-#     set(DXC_PATH $ENV{DXC_PATH})
 endif()
     
-add_custom_command(
-    DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/Src/cs.hlsl
-    OUTPUT
-        ${CMAKE_BINARY_DIR}/cs.dxil
-        # ${CMAKE_BINARY_DIR}/cs.depfile
-        # ${CMAKE_BINARY_DIR}/cs.rootsig.json
-    COMMAND
-        ${DXC_PATH}
-        -T cs_6_0
-        -E main
-        ${CMAKE_CURRENT_SOURCE_DIR}/Src/cs.hlsl
-        -Fo ${CMAKE_BINARY_DIR}/cs.dxil
-        # -Frs ${CMAKE_BINARY_DIR}/cs.rootsig.json
-        -Zi
-        -Qembed_debug
-        -O0
-    #     -MF ${CMAKE_BINARY_DIR}/cs.depfile
-    # DEPFILE
-    #     ${CMAKE_BINARY_DIR}/cs.depfile
-    VERBATIM
-)
-
-if (APPLE)
+if (WIN32)
     add_custom_command(
         DEPENDS
-            ${CMAKE_BINARY_DIR}/cs.dxil
+            ${CMAKE_CURRENT_SOURCE_DIR}/Src/cs.hlsl
         OUTPUT
-            ${CMAKE_BINARY_DIR}/cs.mtlib
-            ${CMAKE_BINARY_DIR}/cs.reflect.json
+            ${CMAKE_BINARY_DIR}/cs.dxil
+            # ${CMAKE_BINARY_DIR}/cs.depfile
+            # ${CMAKE_BINARY_DIR}/cs.rootsig.json
         COMMAND
-            metal-shaderconverter
-                ${CMAKE_BINARY_DIR}/cs.dxil
-                --deployment-os=macOS
-                -o=${CMAKE_BINARY_DIR}/cs.mtlib
-                --output-reflection-file=${CMAKE_BINARY_DIR}/cs.reflect.json
+            ${DXC_PATH}
+            -T cs_6_0
+            -E CSMain
+            ${CMAKE_CURRENT_SOURCE_DIR}/Src/cs.hlsl
+            -Fo ${CMAKE_BINARY_DIR}/cs.dxil
+            # -Frs ${CMAKE_BINARY_DIR}/cs.rootsig.json
+            -Zi
+            -Qembed_debug
+            -O0
+        #     -MF ${CMAKE_BINARY_DIR}/cs.depfile
+        # DEPFILE
+        #     ${CMAKE_BINARY_DIR}/cs.depfile
         VERBATIM
     )
+elseif(APPLE)
+    add_custom_command(
+        DEPENDS
+            ${CMAKE_CURRENT_SOURCE_DIR}/Src/cs.hlsl
+        OUTPUT
+            ${CMAKE_BINARY_DIR}/cs.metal
+        COMMAND
+            ${SHADERCROSS_PATH}
+            -o ${CMAKE_BINARY_DIR}/cs.metal
+            ${CMAKE_CURRENT_SOURCE_DIR}/Src/cs.hlsl
+            -s HLSL
+            -d MSL
+            -t compute
+            -e CSMain
+            --msl-version 1.2.0
+            -g
+        VERBATIM
+    )
+endif()
 
+if (APPLE)
     add_custom_target(Shaders
         DEPENDS
-            ${CMAKE_BINARY_DIR}/cs.mtlib
+            ${CMAKE_BINARY_DIR}/cs.metal
     )
 elseif(WIN32)
     add_custom_target(Shaders
